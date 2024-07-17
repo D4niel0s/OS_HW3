@@ -13,7 +13,7 @@
 
 /* A single channel in the message slot*/
 typedef struct chan{
-    unsigned int channel_id;
+    unsigned long channel_id;
     char msg[BUF_LEN];
     int msg_len;
     struct chan *next;
