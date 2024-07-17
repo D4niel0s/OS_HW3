@@ -23,23 +23,19 @@ channels all_slots[256];
 
 
 
-
-//================== DEVICE FUNCTIONS ===========================
 static int device_open( struct inode* inode, struct file* file)
 {
   /* open() does nothing since we only need to do something when a new channel is opened*/
   return SUCCESS;
 }
 
-//---------------------------------------------------------------
+
 static int device_release( struct inode* inode, struct file* file)
 {
   return SUCCESS;
 }
 
-//---------------------------------------------------------------
-// a process which has already opened
-// the device file attempts to read from it
+
 static ssize_t device_read( struct file* file,
                             char __user* buffer,
                             size_t       length,
@@ -48,7 +44,7 @@ static ssize_t device_read( struct file* file,
   channel *chan;
   int i;
 
-  chan = (channel *)file->private_data;
+  chan = (channel *)(file->private_data);
   if(!chan){ /*If channel is not set*/
     return -EINVAL;
   }
@@ -67,13 +63,10 @@ static ssize_t device_read( struct file* file,
       return -1;
     }
   }
-
-  return length;
+  return chan->msg_len;
 }
 
-//---------------------------------------------------------------
-// a processs which has already opened
-// the device file attempts to write to it
+
 static ssize_t device_write( struct file*       file,
                              const char __user* buffer,
                              size_t             length,
@@ -86,7 +79,7 @@ static ssize_t device_write( struct file*       file,
     return -EMSGSIZE;
   }
 
-  chan = (channel *)file->private_data;
+  chan = (channel *)(file->private_data);
   if(!chan){ /*If channel is not set*/
     return -EINVAL;
   }
@@ -98,11 +91,11 @@ static ssize_t device_write( struct file*       file,
     }
   }
   chan->msg_len = length;
-
   return length;
 }
 
-//----------------------------------------------------------------
+
+
 static long device_ioctl( struct   file* file,
                           unsigned int   ioctl_command_id,
                           unsigned long  ioctl_param )
@@ -132,7 +125,6 @@ static long device_ioctl( struct   file* file,
     tmp = (channel *)kmalloc(sizeof(channel), GFP_KERNEL);
 
     if(!tmp){
-      printk("Failed to allocate memory");
       return -1;
     }
 
@@ -150,14 +142,10 @@ static long device_ioctl( struct   file* file,
   }
 
   file->private_data = (void *)iterator;
-
   return SUCCESS;
   }
 
-//==================== DEVICE SETUP =============================
 
-// This structure will hold the functions to be called
-// when a process does something to the device we created
 struct file_operations Fops = {
   .owner	  = THIS_MODULE, 
   .read           = device_read,
@@ -182,7 +170,6 @@ static int __init simple_init(void)
   for(i=0;i<256;++i){
     all_slots[i].head = NULL; /* Init all lists to be empty */
   }
-
   return SUCCESS;
 }
 
@@ -207,8 +194,6 @@ static void __exit simple_cleanup(void)
   unregister_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME);
 }
 
-//---------------------------------------------------------------
+
 module_init(simple_init);
 module_exit(simple_cleanup);
-
-//========================= END OF FILE =========================
