@@ -15,6 +15,7 @@
 typedef struct chan{
     unsigned int channel_id;
     char msg[BUF_LEN];
+    int msg_len;
     struct chan *next;
 } channel;
 
