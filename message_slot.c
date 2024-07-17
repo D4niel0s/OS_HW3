@@ -27,7 +27,8 @@ channels all_slots[256];
 //================== DEVICE FUNCTIONS ===========================
 static int device_open( struct inode* inode, struct file* file)
 {
-    return SUCCESS;
+  /* open() does nothing since we only need to do something when a new channel is opened*/
+  return SUCCESS;
 }
 
 //---------------------------------------------------------------
@@ -44,7 +45,30 @@ static ssize_t device_read( struct file* file,
                             size_t       length,
                             loff_t*      offset )
 {
-  return -EINVAL;
+  channel *chan;
+  int i;
+
+  chan = (channel *)file->private_data;
+  if(!chan){ /*If channel is not set*/
+    return -EINVAL;
+  }
+
+  if(chan->msg_len == 0){
+    return -EWOULDBLOCK;
+  }
+
+  if(length < chan->msg_len){
+    return -ENOSPC;
+  }
+
+  /* Channel is set, write to channel*/
+  for(i=0;i<chan->msg_len;++i){
+    if(put_user(chan->msg[i], buffer+i) != 0){
+      return -1;
+    }
+  }
+
+  return length;
 }
 
 //---------------------------------------------------------------
@@ -55,8 +79,27 @@ static ssize_t device_write( struct file*       file,
                              size_t             length,
                              loff_t*            offset)
 {
+  channel *chan;
+  int i;
 
-  return 1;
+  if(length == 0 || length > 128 || buffer == NULL){
+    return -EMSGSIZE;
+  }
+
+  chan = (channel *)file->private_data;
+  if(!chan){ /*If channel is not set*/
+    return -EINVAL;
+  }
+
+  /* Channel is set, write to channel*/
+  for(i=0;i<length;++i){
+    if(get_user(chan->msg[i], buffer+i) != 0){
+      return -1;
+    }
+  }
+  chan->msg_len = length;
+
+  return length;
 }
 
 //----------------------------------------------------------------
@@ -94,7 +137,8 @@ static long device_ioctl( struct   file* file,
     }
 
     tmp->channel_id = ioctl_param;
-    tmp->msg = "";
+    tmp->msg[0] = '\0';
+    tmp->msg_len = 0;
     tmp->next = NULL;
 
     if(i == 0){ /*Empty channels list*/
@@ -128,10 +172,6 @@ static int __init simple_init(void)
 {
   int rc = -1 ,i;
 
-  for(i=0;i<256;++i){
-    all_slots[i].head = NULL; /* Init all lists to be empty */
-  }
-  
   rc = register_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME, &Fops);
 
   if(rc < 0) {
@@ -139,13 +179,31 @@ static int __init simple_init(void)
     return rc;
   }
 
+  for(i=0;i<256;++i){
+    all_slots[i].head = NULL; /* Init all lists to be empty */
+  }
+
   return SUCCESS;
 }
 
 static void __exit simple_cleanup(void)
 {
-  // Unregister the device
-  // Should always succeed
+  channel *h, *prev;
+  int i;
+
+  /* Iterate all message slots */
+  for(i=0;i<256;++i){
+    
+    /* Free all channels of a given message slot*/
+    h = all_slots[i].head;
+    while(h != NULL){
+      prev = h;
+      h=h->next;
+
+      kfree(prev);
+    }
+  }
+
   unregister_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME);
 }
 
