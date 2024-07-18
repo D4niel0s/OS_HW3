@@ -22,6 +22,7 @@ int main(int argc, char **argv){
         perror("Error: could not open file\n");
         exit(1);
     }
+    
     id = atoi(argv[2]);
     ret = ioctl(fd, MSG_SLOT_CHANNEL, id);
     if(ret < 0){
