@@ -42,7 +42,6 @@ static ssize_t device_read( struct file* file,
                             loff_t*      offset )
 {
   channel *chan;
-  int i;
 
   chan = (channel *)(file->private_data);
   if(!chan){ /*If channel is not set*/
@@ -58,11 +57,10 @@ static ssize_t device_read( struct file* file,
   }
 
   /* Channel is set, write to channel*/
-  for(i=0;i<chan->msg_len;++i){
-    if(put_user(chan->msg[i], buffer+i) != 0){
-      return -1;
-    }
+  if(copy_to_user(buffer, chan->msg, chan->msg_len)){
+    return -1;
   }
+
   return chan->msg_len;
 }
 
@@ -73,7 +71,6 @@ static ssize_t device_write( struct file*       file,
                              loff_t*            offset)
 {
   channel *chan;
-  int i;
 
   if(length == 0 || length > 128 || buffer == NULL){
     return -EMSGSIZE;
@@ -85,10 +82,8 @@ static ssize_t device_write( struct file*       file,
   }
 
   /* Channel is set, write to channel*/
-  for(i=0;i<length;++i){
-    if(get_user(chan->msg[i], buffer+i) != 0){
-      return -1;
-    }
+  if(copy_from_user(chan->msg, buffer, length)){
+    return -1;
   }
   chan->msg_len = length;
   return length;
