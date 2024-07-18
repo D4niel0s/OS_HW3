@@ -23,24 +23,18 @@ channels all_slots[256];
 
 
 
-static int device_open( struct inode* inode, struct file* file)
-{
+static int device_open( struct inode* inode, struct file* file){
   /* open() does nothing since we only need to do something when a new channel is opened*/
   return SUCCESS;
 }
 
 
-static int device_release( struct inode* inode, struct file* file)
-{
+static int device_release( struct inode* inode, struct file* file){
   return SUCCESS;
 }
 
 
-static ssize_t device_read( struct file* file,
-                            char __user* buffer,
-                            size_t       length,
-                            loff_t*      offset )
-{
+static ssize_t device_read(struct file* file, char __user* buffer, size_t length, loff_t* offset){
   channel *chan;
 
   chan = (channel *)(file->private_data);
@@ -65,11 +59,7 @@ static ssize_t device_read( struct file* file,
 }
 
 
-static ssize_t device_write( struct file*       file,
-                             const char __user* buffer,
-                             size_t             length,
-                             loff_t*            offset)
-{
+static ssize_t device_write(struct file* file, const char __user* buffer, size_t length, loff_t* offset){
   channel *chan;
 
   if(length == 0 || length > 128 || buffer == NULL){
@@ -91,10 +81,7 @@ static ssize_t device_write( struct file*       file,
 
 
 
-static long device_ioctl( struct   file* file,
-                          unsigned int   ioctl_command_id,
-                          unsigned long  ioctl_param )
-{
+static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsigned long ioctl_param){
   unsigned int minor, i;
   channel *iterator, *last, *tmp;
 
@@ -151,8 +138,7 @@ struct file_operations Fops = {
 };
 
 
-static int __init simple_init(void)
-{
+static int __init simple_init(void){
   int rc = -1 ,i;
 
   rc = register_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME, &Fops);
@@ -168,8 +154,7 @@ static int __init simple_init(void)
   return SUCCESS;
 }
 
-static void __exit simple_cleanup(void)
-{
+static void __exit simple_cleanup(void){
   channel *h, *prev;
   int i;
 
